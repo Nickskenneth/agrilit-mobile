@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/app_constants.dart';
+import 'package:flutter/foundation.dart';
 
 /// Wrapper HTTP client dengan auto-inject Authorization header
 /// dan error handling terpusat
@@ -91,7 +92,16 @@ class ApiClient {
         if (token != null) 'Authorization': 'Bearer $token',
       });
 
+      // PENTING: Tambahkan semua fields (termasuk commodity)
       request.fields.addAll(fields);
+
+      // Log untuk debugging
+      debugPrint('=== MULTIPART REQUEST ===');
+      debugPrint('URL: $url');
+      debugPrint('Fields: ${request.fields}');
+      debugPrint('File field: $fileField');
+      debugPrint('File path: ${imageFile.path}');
+
       request.files.add(
         await http.MultipartFile.fromPath(fileField, imageFile.path),
       );
@@ -99,10 +109,17 @@ class ApiClient {
       final streamed =
           await request.send().timeout(const Duration(seconds: 30));
       final response = await http.Response.fromStream(streamed);
+
+      debugPrint('=== MULTIPART RESPONSE ===');
+      debugPrint('Status: ${response.statusCode}');
+      debugPrint(
+          'Body: ${response.body.substring(0, response.body.length.clamp(0, 500))}');
+
       return _handleResponse(response);
     } on SocketException {
       return ApiResponse.networkError();
     } catch (e) {
+      debugPrint('Multipart error: $e');
       return ApiResponse.error('Terjadi kesalahan: $e');
     }
   }

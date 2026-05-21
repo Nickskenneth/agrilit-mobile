@@ -46,15 +46,27 @@ class _ScanScreenState extends State<ScanScreen> {
       return;
     }
 
+    // Log komoditas yang dipilih
+    debugPrint('=== SCAN INITIATED ===');
+    debugPrint('Selected commodity: $_commodity');
+    debugPrint('Image path: ${_selectedImage!.path}');
+
     final provider = context.read<DiseaseScanProvider>();
     final ok = await provider.scanImage(
       imageFile: _selectedImage!,
-      commodity: _commodity,
+      commodity: _commodity, // ← Pastikan ini terkirim
     );
 
     if (!mounted) return;
 
     if (ok && provider.lastResult != null) {
+      // Log hasil
+      debugPrint('=== SCAN RESULT ===');
+      debugPrint('Label: ${provider.lastResult!.resultLabel}');
+      debugPrint('Label ID: ${provider.lastResult!.resultLabelId}');
+      debugPrint('Commodity: ${provider.lastResult!.commodity}');
+      debugPrint('Confidence: ${provider.lastResult!.confidenceDisplay}');
+
       context.push('/scan/result', extra: provider.lastResult);
     } else if (provider.error != null) {
       ScaffoldMessenger.of(context).showSnackBar(

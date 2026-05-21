@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:provider/provider.dart';
@@ -201,6 +202,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                       if (article.content != null)
                         Html(
                           data: article.content!,
+                          extensions: const [], // IframeHtmlExtension dihapus: tidak support web
                           style: {
                             'body': Style(
                               fontSize: FontSize(15),

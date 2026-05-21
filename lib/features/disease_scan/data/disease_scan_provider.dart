@@ -96,8 +96,10 @@ class DiseaseScanProvider extends ChangeNotifier {
     final position = await _getPosition();
 
     // 3. Build form fields
+    // PENTING: 'commodity' WAJIB ada di fields karena Laravel
+    // membaca $request->commodity lalu forward ke FastAPI /predict/{commodity}
     final fields = <String, String>{
-      'commodity': commodity,
+      'commodity': commodity, // ← Ini yang menentukan filter di FastAPI
       'scanned_at': DateTime.now().toIso8601String(),
       if (position != null) ...{
         'latitude': position.latitude.toString(),
@@ -105,15 +107,25 @@ class DiseaseScanProvider extends ChangeNotifier {
       },
     };
 
+    // Log untuk debugging
+    debugPrint('=== SCAN REQUEST ===');
+    debugPrint('Commodity: $commodity');
+    debugPrint('Fields: $fields');
+    debugPrint('Image path: ${compressed.path}');
+
     // 4. Upload ke Laravel
     final response = await _api.postMultipart(
-      ApiConstants.scans,
+      ApiConstants.scans, // → POST /api/scans
       fields: fields,
       imageFile: compressed,
-      fileField: 'image',
+      fileField: 'image', // ← field name harus 'image' sesuai validasi Laravel
     );
 
     _isScanning = false;
+
+    debugPrint('=== SCAN RESPONSE ===');
+    debugPrint('Success: ${response.success}');
+    debugPrint('Data: ${response.data}');
 
     if (response.success) {
       final data = response.data as Map<String, dynamic>;
@@ -123,7 +135,6 @@ class DiseaseScanProvider extends ChangeNotifier {
       return true;
     }
 
-    // Jika offline — simpan ke SQLite untuk sync nanti
     if (response.isNetworkError) {
       await _saveOfflineScan(
         imageFile: compressed,
@@ -134,6 +145,7 @@ class DiseaseScanProvider extends ChangeNotifier {
       await _updateUnsyncedCount();
     } else {
       _error = response.message;
+      debugPrint('Scan error: ${response.message}');
     }
 
     notifyListeners();
