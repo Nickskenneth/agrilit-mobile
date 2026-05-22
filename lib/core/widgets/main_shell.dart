@@ -1,10 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../constants/app_colors.dart';
+import '../../features/auth/data/auth_provider.dart';
 
 class MainShell extends StatelessWidget {
   final Widget child;
   const MainShell({super.key, required this.child});
+
+  Future<void> _confirmLogout(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Keluar Aplikasi'),
+        content: const Text('Apakah Anda yakin ingin keluar?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: const Text('Keluar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      await context.read<AuthProvider>().logout();
+      if (context.mounted) context.go('/login');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,6 +60,9 @@ class MainShell extends StatelessWidget {
             case 3:
               context.go('/forum');
               break;
+            case 4:
+              _confirmLogout(context);
+              break;
           }
         },
         backgroundColor: Colors.white,
@@ -58,6 +88,11 @@ class MainShell extends StatelessWidget {
             icon: Icon(Icons.forum_outlined),
             selectedIcon: Icon(Icons.forum, color: AppColors.primary),
             label: 'Forum',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.logout, color: Colors.red),
+            selectedIcon: Icon(Icons.logout, color: Colors.red),
+            label: 'Keluar',
           ),
         ],
       ),
