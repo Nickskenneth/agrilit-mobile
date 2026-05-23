@@ -50,7 +50,8 @@ dependencies:
   intl: ^0.19.0 # Format tanggal bahasa Indonesia
   flutter_dotenv: ^5.1.0 # Environment variables
   # flutter_html_iframe: ^3.0.0  # Dihapus: tidak support web (platformViewRegistry deprecated)
-  # webview_flutter: ^4.13.1     # Tidak dipakai langsung di kode
+  webview_flutter: ^4.13.1      # Dipakai untuk render web content
+  url_launcher: ^6.3.0          # Buka link YouTube di app YouTube / browser
   sqflite_common_ffi_web: ^1.0.2
 
 dev_dependencies:

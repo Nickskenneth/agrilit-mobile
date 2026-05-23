@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
@@ -202,7 +203,15 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                       if (article.content != null)
                         Html(
                           data: article.content!,
-                          extensions: const [], // IframeHtmlExtension dihapus: tidak support web
+                          extensions: const [],
+                          onLinkTap: (url, attributes, element) async {
+                            if (url == null) return;
+                            final uri = Uri.tryParse(url);
+                            if (uri != null && await canLaunchUrl(uri)) {
+                              await launchUrl(uri,
+                                  mode: LaunchMode.externalApplication);
+                            }
+                          },
                           style: {
                             'body': Style(
                               fontSize: FontSize(15),
