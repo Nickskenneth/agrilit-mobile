@@ -12,6 +12,7 @@ class DiseaseScanModel {
   final bool synced;
   final String scannedAt;
   final String? notes;
+  final bool lowConfidence;
 
   DiseaseScanModel({
     this.id,
@@ -27,6 +28,7 @@ class DiseaseScanModel {
     required this.synced,
     required this.scannedAt,
     this.notes,
+    this.lowConfidence = false,
   });
 
   factory DiseaseScanModel.fromJson(Map<String, dynamic> json) =>
@@ -44,9 +46,17 @@ class DiseaseScanModel {
         synced: json['synced'] as bool? ?? true,
         scannedAt: json['scanned_at'] as String,
         notes: json['notes'] as String?,
+        lowConfidence: json['low_confidence'] as bool? ?? false,
       );
 
-  bool get isHealthy => resultLabel?.toLowerCase().contains('healthy') ?? false;
+  /// Model tidak dapat mengidentifikasi gambar (confidence terlalu rendah
+  /// atau bukan foto daun tanaman yang valid).
+  bool get isUnidentified =>
+      resultLabel == 'Tidak_Teridentifikasi' || (lowConfidence == true);
+
+  bool get isHealthy =>
+      !isUnidentified &&
+      (resultLabel?.toLowerCase().contains('healthy') ?? false);
 
   String get confidenceDisplay =>
       confidencePercent ??

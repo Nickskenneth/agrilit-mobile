@@ -17,9 +17,13 @@ class ScanResultScreen extends StatelessWidget {
       );
     }
 
-    // Memakai getter bawaan dari model Anda
+    final isUnidentified = scan!.isUnidentified;
     final isHealthy = scan!.isHealthy;
-    final color = isHealthy ? AppColors.success : AppColors.error;
+
+    // Warna banner: abu-abu untuk tidak teridentifikasi, hijau/merah untuk hasil valid
+    final color = isUnidentified
+        ? const Color(0xFF757575)   // abu-abu
+        : (isHealthy ? AppColors.success : AppColors.error);
     final commodityColor = AppColors.commodityColor(scan!.commodity);
 
     return Scaffold(
@@ -46,16 +50,21 @@ class ScanResultScreen extends StatelessWidget {
               child: Column(
                 children: [
                   Icon(
-                    isHealthy ? Icons.check_circle : Icons.warning_rounded,
+                    isUnidentified
+                        ? Icons.help_outline_rounded
+                        : (isHealthy
+                            ? Icons.check_circle
+                            : Icons.warning_rounded),
                     color: Colors.white,
                     size: 64,
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    // Memakai resultLabelId atau resultLabel
-                    scan!.resultLabelId ??
-                        scan!.resultLabel ??
-                        'Tidak dapat dianalisis',
+                    isUnidentified
+                        ? 'Tidak Dapat Diidentifikasi'
+                        : (scan!.resultLabelId ??
+                            scan!.resultLabel ??
+                            'Tidak dapat dianalisis'),
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: Colors.white,
@@ -65,21 +74,34 @@ class ScanResultScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(20),
+                  if (isUnidentified)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8),
+                      child: Text(
+                        'Pastikan foto menampilkan daun tanaman dengan jelas',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 13,
+                        ),
+                      ),
+                    )
+                  else
+                    Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        'Tingkat Kepercayaan: ${scan!.confidenceDisplay}',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500),
+                      ),
                     ),
-                    child: Text(
-                      'Tingkat Kepercayaan: ${scan!.confidenceDisplay}',
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500),
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -110,7 +132,9 @@ class ScanResultScreen extends StatelessWidget {
                         _InfoRow(
                           icon: Icons.label_outline,
                           label: 'Label Teknis',
-                          value: scan!.resultLabel ?? 'Menunggu diagnosa',
+                          value: isUnidentified
+                              ? 'Gambar tidak valid'
+                              : (scan!.resultLabel ?? 'Menunggu diagnosa'),
                           color: AppColors.textSecondary,
                         ),
                         if (scan!.locationName != null) ...[
@@ -135,8 +159,52 @@ class ScanResultScreen extends StatelessWidget {
 
                   const SizedBox(height: 20),
 
-                  // Rekomendasi (Hanya muncul jika tidak sehat)
-                  if (!isHealthy) ...[
+                  // Pesan tidak teridentifikasi
+                  if (isUnidentified) ...[
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF5F5F5),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFE0E0E0)),
+                      ),
+                      child: const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.tips_and_updates_outlined,
+                                  size: 18, color: Color(0xFF757575)),
+                              SizedBox(width: 8),
+                              Text(
+                                'Tips untuk hasil lebih akurat:',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  color: Color(0xFF424242),
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 12),
+                          _TipItem(
+                              '📸 Foto daun dari jarak dekat (20–30 cm)'),
+                          _TipItem(
+                              '☀️ Gunakan cahaya yang cukup, hindari bayangan'),
+                          _TipItem(
+                              '🍃 Pastikan daun tanaman memenuhi sebagian besar frame'),
+                          _TipItem(
+                              '🔍 Pilih daun yang menunjukkan gejala paling jelas'),
+                          _TipItem(
+                              '🌿 Pilih komoditas yang sesuai (cabai/jagung/kentang)'),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+
+                  // Rekomendasi (Hanya muncul jika tidak sehat dan teridentifikasi)
+                  if (!isHealthy && !isUnidentified) ...[
                     const Text(
                       '💡 Rekomendasi Penanganan',
                       style: TextStyle(
@@ -280,6 +348,26 @@ class ScanResultScreen extends StatelessWidget {
       'Konsultasikan kondisi tanaman dengan pakar pertanian.',
       'Foto kondisi daun dan unggah ke forum untuk mendapat saran lebih spesifik.',
     ];
+  }
+}
+
+class _TipItem extends StatelessWidget {
+  final String text;
+  const _TipItem(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 13,
+          color: Color(0xFF616161),
+          height: 1.4,
+        ),
+      ),
+    );
   }
 }
 
