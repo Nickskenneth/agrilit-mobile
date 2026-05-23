@@ -4,12 +4,15 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 /// Custom HtmlExtension untuk merender tag <iframe> YouTube sebagai player inline.
 ///
-/// SOLUSI error 153 "Video player configuration error":
-/// YouTube memblokir loading youtube.com/embed/ID langsung di Android WebView.
-/// Fix: Generate HTML lokal yang memanggil YouTube IFrame JavaScript API —
-/// cara ini yang diizinkan YouTube dan dipakai semua website/app profesional.
+/// FIX EMBEDDER_IDENTITY_MISSING:
+/// YouTube menolak embed jika tidak ada origin domain yang valid.
+/// loadHtmlString() tanpa baseUrl = data: URI = origin null = YouTube reject.
+/// Solusi: set baseUrl ke agrilit.my.id + origin parameter di playerVars.
 class IframeHtmlExtension extends HtmlExtension {
   const IframeHtmlExtension();
+
+  // Domain asal yang dikenal YouTube sebagai embedder
+  static const _origin = 'https://agrilit.my.id';
 
   @override
   Set<String> get supportedTags => {'iframe'};
@@ -53,26 +56,22 @@ class _YoutubeWebViewState extends State<_YoutubeWebView> {
       ..setBackgroundColor(Colors.black);
 
     if (videoId != null) {
-      // Muat HTML lokal yang pakai YouTube IFrame JavaScript API
-      // YouTube mengizinkan cara ini — tidak di-block seperti direct embed URL
-      _controller.loadHtmlString(_buildYoutubeHtml(videoId));
+      // loadHtmlString dengan baseUrl = agrilit.my.id agar YouTube menerima origin
+      _controller.loadHtmlString(
+        _buildYoutubeHtml(videoId),
+        baseUrl: IframeHtmlExtension._origin,
+      );
     } else {
-      // Bukan YouTube, load URL biasa
       _controller.loadRequest(Uri.parse(widget.src));
     }
   }
 
-  /// Ekstrak video ID dari berbagai format YouTube URL:
-  /// - https://www.youtube.com/embed/VIDEO_ID
-  /// - https://www.youtube.com/embed/VIDEO_ID?...
   String? _extractYoutubeId(String url) {
     final regex = RegExp(r'youtube\.com/embed/([a-zA-Z0-9_\-]+)');
     final match = regex.firstMatch(url);
     return match?.group(1);
   }
 
-  /// Generate HTML lokal yang embed video via YouTube IFrame JavaScript API.
-  /// Ini cara yang direkomendasikan YouTube — bukan direct URL embed.
   String _buildYoutubeHtml(String videoId) => '''
 <!DOCTYPE html>
 <html>
@@ -93,16 +92,16 @@ class _YoutubeWebViewState extends State<_YoutubeWebView> {
       player = new YT.Player('player', {
         videoId: '$videoId',
         playerVars: {
+          'origin': '${IframeHtmlExtension._origin}',
           'playsinline': 1,
           'controls': 1,
           'rel': 0,
           'modestbranding': 1,
-          'fs': 1
+          'fs': 1,
+          'enablejsapi': 1
         },
         events: {
-          'onReady': function(event) {
-            // Player siap, tidak autoplay
-          }
+          'onReady': function(event) {}
         }
       });
     }
