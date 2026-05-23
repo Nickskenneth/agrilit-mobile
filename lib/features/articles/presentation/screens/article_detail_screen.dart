@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../../../core/widgets/iframe_html_extension.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
@@ -203,7 +204,9 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                       if (article.content != null)
                         Html(
                           data: article.content!,
-                          extensions: const [],
+                          // IframeHtmlExtension aktif di Android (embed YouTube via WebView)
+                          // Di web: iframe dilewati karena webview_flutter tidak support web
+                          extensions: kIsWeb ? const [] : const [IframeHtmlExtension()],
                           onLinkTap: (url, attributes, element) async {
                             if (url == null) return;
                             final uri = Uri.tryParse(url);
