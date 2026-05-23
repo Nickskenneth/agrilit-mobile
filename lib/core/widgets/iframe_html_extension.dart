@@ -2,16 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
-/// Custom HtmlExtension untuk merender tag <iframe> YouTube sebagai player inline.
+/// Custom HtmlExtension untuk merender <iframe> YouTube sebagai player inline.
 ///
-/// FIX EMBEDDER_IDENTITY_MISSING:
-/// YouTube menolak embed jika tidak ada origin domain yang valid.
-/// loadHtmlString() tanpa baseUrl = data: URI = origin null = YouTube reject.
-/// Solusi: set baseUrl ke agrilit.my.id + origin parameter di playerVars.
+/// Pendekatan: tampilkan thumbnail YouTube dulu (tidak ada error),
+/// saat user klik → YouTube IFrame API load dan video langsung play.
+/// Ini menghilangkan error cover "Watch on YouTube / Error 153" yang muncul
+/// karena YouTube show error state sebelum user berinteraksi.
 class IframeHtmlExtension extends HtmlExtension {
   const IframeHtmlExtension();
 
-  // Domain asal yang dikenal YouTube sebagai embedder
   static const _origin = 'https://agrilit.my.id';
 
   @override
@@ -56,9 +55,11 @@ class _YoutubeWebViewState extends State<_YoutubeWebView> {
       ..setBackgroundColor(Colors.black);
 
     if (videoId != null) {
-      // loadHtmlString dengan baseUrl = agrilit.my.id agar YouTube menerima origin
+      // Tampilkan thumbnail + play button dulu.
+      // Saat diklik → IFrame API load → video play langsung (autoplay=1).
+      // Tidak ada error "Watch on YouTube" karena player baru dibuat setelah klik.
       _controller.loadHtmlString(
-        _buildYoutubeHtml(videoId),
+        _buildThumbnailHtml(videoId),
         baseUrl: IframeHtmlExtension._origin,
       );
     } else {
@@ -72,7 +73,9 @@ class _YoutubeWebViewState extends State<_YoutubeWebView> {
     return match?.group(1);
   }
 
-  String _buildYoutubeHtml(String videoId) => '''
+  /// HTML dengan thumbnail YouTube + tombol play.
+  /// Saat diklik, YouTube IFrame API di-load secara dinamis dan video autoplay.
+  String _buildThumbnailHtml(String videoId) => '''
 <!DOCTYPE html>
 <html>
 <head>
@@ -80,28 +83,99 @@ class _YoutubeWebViewState extends State<_YoutubeWebView> {
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; background: #000; overflow: hidden; }
+
+    /* Cover: thumbnail + tombol play */
+    #cover {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+      background: #000;
+    }
+    #thumbnail {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    #play-btn {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 64px;
+      height: 64px;
+      background: rgba(255, 0, 0, 0.85);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    }
+    #play-btn svg {
+      width: 28px;
+      height: 28px;
+      fill: white;
+      margin-left: 4px;
+    }
+
+    /* Player: tersembunyi sampai diklik */
+    #player-wrap {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      display: none;
+    }
     #player { width: 100%; height: 100%; }
   </style>
 </head>
 <body>
-  <div id="player"></div>
-  <script src="https://www.youtube.com/iframe_api"></script>
+
+  <!-- State awal: thumbnail yang bisa diklik -->
+  <div id="cover" onclick="startPlayer()">
+    <img id="thumbnail"
+         src="https://img.youtube.com/vi/$videoId/hqdefault.jpg"
+         onerror="this.src='https://img.youtube.com/vi/$videoId/mqdefault.jpg'" />
+    <div id="play-btn">
+      <svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>
+    </div>
+  </div>
+
+  <!-- Player YouTube: muncul setelah diklik -->
+  <div id="player-wrap">
+    <div id="player"></div>
+  </div>
+
   <script>
-    var player;
+    var playerLoaded = false;
+
+    function startPlayer() {
+      if (playerLoaded) return;
+      playerLoaded = true;
+
+      // Sembunyikan thumbnail, tampilkan area player
+      document.getElementById('cover').style.display = 'none';
+      document.getElementById('player-wrap').style.display = 'block';
+
+      // Load YouTube IFrame API secara dinamis
+      var tag = document.createElement('script');
+      tag.src = 'https://www.youtube.com/iframe_api';
+      document.head.appendChild(tag);
+    }
+
+    // Dipanggil otomatis oleh YouTube IFrame API saat siap
     function onYouTubeIframeAPIReady() {
-      player = new YT.Player('player', {
+      new YT.Player('player', {
         videoId: '$videoId',
         playerVars: {
           'origin': '${IframeHtmlExtension._origin}',
+          'autoplay': 1,
           'playsinline': 1,
           'controls': 1,
           'rel': 0,
           'modestbranding': 1,
-          'fs': 1,
           'enablejsapi': 1
-        },
-        events: {
-          'onReady': function(event) {}
         }
       });
     }
