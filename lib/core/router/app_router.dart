@@ -15,6 +15,7 @@ import '../../features/disease_scan/presentation/screens/scan_screen.dart';
 import '../../features/disease_scan/presentation/screens/scan_result_screen.dart';
 import '../../features/disease_scan/presentation/screens/scan_history_screen.dart';
 import '../widgets/main_shell.dart';
+import '../../features/profile/presentation/screens/profile_screen.dart';
 
 class AppRouter {
   static final _rootKey = GlobalKey<NavigatorState>();
@@ -105,6 +106,10 @@ class AppRouter {
                 ),
               ),
             ],
+          ),
+          GoRoute(
+            path: '/profile',
+            builder: (_, __) => const ProfileScreen(),
           ),
         ],
       ),
