@@ -14,10 +14,7 @@ import 'core/router/app_router.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Gunakan sqflite web factory saat berjalan di browser
-  if (kIsWeb) {
-    databaseFactory = databaseFactoryFfiWeb;
-  }
+ 
   await dotenv.load(fileName: '.env');
   runApp(const AgriLitApp());
 }
